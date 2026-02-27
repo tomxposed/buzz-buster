@@ -245,7 +245,7 @@ fun RuleEditorSheet(
                 placeholder = {
                     Text(
                         when (filterType) {
-                            FilterType.STRING_MATCH -> "e.g., limited offer"
+                            FilterType.STRING_MATCH -> "e.g., limited offer, flash sale, act now"
                             FilterType.REGEX -> "e.g., (?:sale|offer|discount).*\\d+%"
                             FilterType.AI_GENERATED -> "AI-generated pattern will appear here"
                         }

@@ -26,13 +26,13 @@ import com.tom.buzzbuster.ui.viewmodel.SettingsViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel = viewModel()
+    viewModel: SettingsViewModel = viewModel(),
+    onNavigateToAbout: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     var showApiKeyDialog by remember { mutableStateOf(false) }
-    var showHistoryLimitMenu by remember { mutableStateOf(false) }
     var showResetDialog by remember { mutableStateOf(false) }
     var showNukeDialog by remember { mutableStateOf(false) }
 
@@ -89,59 +89,6 @@ fun SettingsScreen(
             }
         }
 
-        // ── Privacy ─────────────────────────────────────
-        SettingsSection(title = "Privacy") {
-            Box {
-                SettingsRow(
-                    icon = Icons.Rounded.Storage,
-                    title = "History Limit",
-                    subtitle = "Records to keep",
-                    iconTint = InfoBlue,
-                    onClick = { showHistoryLimitMenu = true }
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = "${state.historyLimit}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Icon(
-                            Icons.Rounded.ArrowDropDown,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                DropdownMenu(
-                    expanded = showHistoryLimitMenu,
-                    onDismissRequest = { showHistoryLimitMenu = false }
-                ) {
-                    listOf(100, 250, 500, 1000, 2500).forEach { limit ->
-                        DropdownMenuItem(
-                            text = { Text("$limit records") },
-                            onClick = {
-                                viewModel.setHistoryLimit(limit)
-                                showHistoryLimitMenu = false
-                            },
-                            leadingIcon = {
-                                if (state.historyLimit == limit) {
-                                    Icon(
-                                        Icons.Rounded.Check,
-                                        contentDescription = null,
-                                        tint = Crimson
-                                    )
-                                }
-                            }
-                        )
-                    }
-                }
-            }
-        }
 
         // ── About ────────────────────────────────────────
         SettingsSection(title = "About") {
@@ -150,7 +97,7 @@ fun SettingsScreen(
                 title = "About BuzzBuster",
                 subtitle = "Version 1.0",
                 iconTint = Crimson,
-                onClick = { /* TODO: About dialog */ }
+                onClick = onNavigateToAbout
             ) {
                 Icon(
                     Icons.Rounded.ChevronRight,
@@ -192,10 +139,7 @@ fun SettingsScreen(
                 subtitle = "Bug tracker",
                 iconTint = WarningAmber,
                 onClick = {
-                    val intent = Intent(Intent.ACTION_SENDTO).apply {
-                        data = Uri.parse("mailto:support@buzzbuster.app")
-                        putExtra(Intent.EXTRA_SUBJECT, "BuzzBuster Bug Report")
-                    }
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/tomxposed/buzz-buster/issues/new"))
                     context.startActivity(intent)
                 }
             ) {

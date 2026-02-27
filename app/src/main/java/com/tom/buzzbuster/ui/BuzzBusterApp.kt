@@ -53,6 +53,8 @@ fun BuzzBusterApp() {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
+            val hideBottomBar = currentDestination?.route == "about"
+            if (!hideBottomBar) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -103,6 +105,7 @@ fun BuzzBusterApp() {
                     }
                 }
             }
+            }
         }
     ) { innerPadding ->
         NavHost(
@@ -145,7 +148,16 @@ fun BuzzBusterApp() {
                 ) 
             }
             composable(Screen.History.route) { HistoryScreen() }
-            composable(Screen.Settings.route) { SettingsScreen() }
+            composable(Screen.Settings.route) {
+                SettingsScreen(
+                    onNavigateToAbout = { navController.navigate("about") }
+                )
+            }
+            composable("about") {
+                AboutScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
         }
     }
 }

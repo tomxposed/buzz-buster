@@ -25,9 +25,10 @@ object FilterEngine {
                 rule.targetPackage.split(",").any { it.trim() == packageName })
         }
 
-        // Tier 1: String Match
+        // Tier 1: String Match (supports comma-separated keywords)
         applicable.filter { it.filterType == FilterType.STRING_MATCH }.forEach { rule ->
-            if (text.contains(rule.pattern, ignoreCase = true)) {
+            val keywords = rule.pattern.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            if (keywords.any { keyword -> text.contains(keyword, ignoreCase = true) }) {
                 return FilterResult(matched = true, rule = rule, matchType = "STRING_MATCH")
             }
         }
