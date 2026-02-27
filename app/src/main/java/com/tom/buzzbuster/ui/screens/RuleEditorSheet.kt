@@ -2,7 +2,10 @@ package com.tom.buzzbuster.ui.screens
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -13,7 +16,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.tom.buzzbuster.data.model.FilterRule
 import com.tom.buzzbuster.data.model.FilterType
@@ -22,7 +27,7 @@ import com.tom.buzzbuster.ui.theme.*
 import com.tom.buzzbuster.ui.viewmodel.RulesViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun RuleEditorSheet(
     rule: FilterRule?,
@@ -37,6 +42,41 @@ fun RuleEditorSheet(
     var pattern by remember { mutableStateOf(rule?.pattern ?: "") }
     var targetPackage by remember { mutableStateOf(rule?.targetPackage ?: "") }
     var aiPrompt by remember { mutableStateOf(rule?.originalPrompt ?: "") }
+    var showAppPicker by remember { mutableStateOf(false) }
+
+    val selectedPackages = remember {
+        mutableStateListOf<String>().apply {
+            if (!rule?.targetPackage.isNullOrBlank()) {
+                addAll(rule!!.targetPackage!!.split(",").map { it.trim() })
+            }
+        }
+    }
+
+    // Keep targetPackage string in sync
+    LaunchedEffect(selectedPackages.toList()) {
+        targetPackage = selectedPackages.joinToString(",")
+    }
+
+    val context = LocalContext.current
+    var installedApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        installedApps = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val pm = context.packageManager
+            pm.getInstalledApplications(0)
+                .filter { pm.getLaunchIntentForPackage(it.packageName) != null }
+                .map { AppInfo(it.packageName, pm.getApplicationLabel(it).toString()) }
+                .sortedBy { it.name.lowercase() }
+        }
+    }
+
+    val selectedAppsLabel = remember(selectedPackages.toList(), installedApps) {
+        when {
+            selectedPackages.isEmpty() -> null
+            selectedPackages.size == 1 -> installedApps.find { it.packageName == selectedPackages[0] }?.name ?: selectedPackages[0]
+            else -> "${selectedPackages.size} apps selected"
+        }
+    }
 
     // Update pattern when AI generates result
     LaunchedEffect(state.aiResult) {
@@ -116,11 +156,13 @@ fun RuleEditorSheet(
                     selected = filterType == FilterType.REGEX,
                     onClick = { filterType = FilterType.REGEX }
                 )
-                FilterTypeChip(
-                    label = "AI Generate",
-                    selected = filterType == FilterType.AI_GENERATED,
-                    onClick = { filterType = FilterType.AI_GENERATED }
-                )
+                if (state.hasApiKey) {
+                    FilterTypeChip(
+                        label = "AI Generate",
+                        selected = filterType == FilterType.AI_GENERATED,
+                        onClick = { filterType = FilterType.AI_GENERATED }
+                    )
+                }
             }
 
             // ── AI Prompt (only for AI_GENERATED) ───────
@@ -177,7 +219,7 @@ fun RuleEditorSheet(
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Text(
-                                    state.aiError!!,
+                                    "Something went wrong. Please try again.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = ErrorRed
                                 )
@@ -220,26 +262,117 @@ fun RuleEditorSheet(
             )
 
             // ── Target App ──────────────────────────────
-            OutlinedTextField(
-                value = targetPackage,
-                onValueChange = { targetPackage = it },
-                label = { Text("Target App (optional)") },
-                placeholder = { Text("e.g., com.whatsapp — leave empty for all apps") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Crimson,
-                    focusedLabelColor = Crimson
-                )
-            )
             Text(
-                text = "Leave empty to apply globally to all apps",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = "TARGET APP",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.SemiBold
             )
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                ),
+                onClick = { showAppPicker = true }
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            Icons.Rounded.Apps,
+                            contentDescription = null,
+                            tint = if (selectedPackages.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else Crimson,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Text(
+                            text = selectedAppsLabel ?: "All Apps (global)",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (selectedPackages.isEmpty()) FontWeight.Normal else FontWeight.SemiBold,
+                            color = if (selectedPackages.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant
+                                    else MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    if (selectedPackages.isNotEmpty()) {
+                        IconButton(
+                            onClick = { selectedPackages.clear() },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                Icons.Rounded.Close,
+                                contentDescription = "Clear",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    } else {
+                        Icon(
+                            Icons.Rounded.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Leave as All Apps to apply globally",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
 
-            Spacer(modifier = Modifier.height(8.dp))
+                if (selectedPackages.isNotEmpty()) {
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        selectedPackages.toList().forEach { pkg ->
+                            val appName = installedApps.find { it.packageName == pkg }?.name ?: pkg
+                            InputChip(
+                                selected = true,
+                                onClick = { selectedPackages.remove(pkg) },
+                                label = {
+                                    Text(
+                                        appName,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                },
+                                trailingIcon = {
+                                    Icon(
+                                        Icons.Rounded.Close,
+                                        contentDescription = "Remove $appName",
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                },
+                                shape = RoundedCornerShape(20.dp),
+                                colors = InputChipDefaults.inputChipColors(
+                                    selectedContainerColor = Crimson.copy(alpha = 0.12f),
+                                    selectedLabelColor = Crimson,
+                                    selectedTrailingIconColor = Crimson
+                                ),
+                                border = InputChipDefaults.inputChipBorder(
+                                    enabled = true,
+                                    selected = true,
+                                    selectedBorderColor = Crimson.copy(alpha = 0.3f)
+                                )
+                            )
+                        }
+                    }
+                }
+            }
 
             // ── Save Button ─────────────────────────────
             AccentButton(
@@ -272,4 +405,160 @@ fun RuleEditorSheet(
             )
         }
     }
+
+    // ── App Picker Dialog ───────────────────────────────
+    if (showAppPicker) {
+        AppPickerDialog(
+            apps = installedApps,
+            selectedPackages = selectedPackages.toSet(),
+            onConfirm = { selected ->
+                selectedPackages.clear()
+                selectedPackages.addAll(selected)
+                showAppPicker = false
+            },
+            onDismiss = { showAppPicker = false }
+        )
+    }
+}
+
+private data class AppInfo(
+    val packageName: String,
+    val name: String
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AppPickerDialog(
+    apps: List<AppInfo>,
+    selectedPackages: Set<String>,
+    onConfirm: (Set<String>) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    val localSelection = remember { mutableStateListOf<String>().apply { addAll(selectedPackages) } }
+
+    val filteredApps = remember(searchQuery, apps) {
+        if (searchQuery.isBlank()) apps
+        else apps.filter {
+            it.name.contains(searchQuery, ignoreCase = true) ||
+            it.packageName.contains(searchQuery, ignoreCase = true)
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                if (localSelection.isEmpty()) "Select Apps"
+                else "Selected (${localSelection.size})",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 400.dp)
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search apps...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.Search,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Rounded.Close, contentDescription = "Clear")
+                            }
+                        }
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Crimson,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    items(filteredApps) { app ->
+                        val isSelected = app.packageName in localSelection
+                        Card(
+                            shape = RoundedCornerShape(10.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected)
+                                    Crimson.copy(alpha = 0.08f)
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            ),
+                            onClick = {
+                                if (isSelected) localSelection.remove(app.packageName)
+                                else localSelection.add(app.packageName)
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Checkbox(
+                                    checked = isSelected,
+                                    onCheckedChange = {
+                                        if (isSelected) localSelection.remove(app.packageName)
+                                        else localSelection.add(app.packageName)
+                                    },
+                                    colors = CheckboxDefaults.colors(
+                                        checkedColor = Crimson,
+                                        checkmarkColor = androidx.compose.ui.graphics.Color.White
+                                    ),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = app.name,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = app.packageName,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(localSelection.toSet()) }) {
+                Text("Done", color = Crimson, fontWeight = FontWeight.SemiBold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(20.dp)
+    )
 }

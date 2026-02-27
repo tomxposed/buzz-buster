@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <style name="Theme.BuzzBuster" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">#FFFF2D55</item>
+        <item name="android:windowSplashScreenBackground">#FFFF2D55</item>
     </style>
 </resources>

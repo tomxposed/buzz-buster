@@ -17,7 +17,8 @@ data class RulesUiState(
     val aiGenerating: Boolean = false,
     val aiResult: String? = null,
     val aiError: String? = null,
-    val searchQuery: String = ""
+    val searchQuery: String = "",
+    val hasApiKey: Boolean = false
 )
 
 class RulesViewModel(application: Application) : AndroidViewModel(application) {
@@ -33,8 +34,9 @@ class RulesViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             combine(
                 repository.getAllRules(),
-                _searchQuery
-            ) { rules, query ->
+                _searchQuery,
+                repository.preferences.geminiApiKey
+            ) { rules, query, apiKey ->
                 val filtered = if (query.isBlank()) rules
                 else rules.filter {
                     it.name.contains(query, ignoreCase = true) ||
@@ -44,7 +46,8 @@ class RulesViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.value = _uiState.value.copy(
                     rules = filtered,
                     isLoading = false,
-                    searchQuery = query
+                    searchQuery = query,
+                    hasApiKey = apiKey.isNotBlank()
                 )
             }.collect()
         }

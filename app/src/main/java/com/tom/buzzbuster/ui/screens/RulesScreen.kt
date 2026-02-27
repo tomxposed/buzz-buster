@@ -27,12 +27,21 @@ import com.tom.buzzbuster.ui.viewmodel.RulesViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RulesScreen(
+    openNewRule: Boolean = false,
+    onNewRuleConsumed: () -> Unit = {},
     viewModel: RulesViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showEditor by remember { mutableStateOf(false) }
     var editingRule by remember { mutableStateOf<FilterRule?>(null) }
     var showDeleteDialog by remember { mutableStateOf<FilterRule?>(null) }
+
+    LaunchedEffect(openNewRule) {
+        if (openNewRule) {
+            showEditor = true
+            onNewRuleConsumed()
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(

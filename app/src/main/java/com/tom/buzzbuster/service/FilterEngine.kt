@@ -21,7 +21,8 @@ object FilterEngine {
 
         // Filter rules applicable to this package (or global rules)
         val applicable = rules.filter { rule ->
-            rule.isEnabled && (rule.targetPackage == null || rule.targetPackage == packageName)
+            rule.isEnabled && (rule.targetPackage == null ||
+                rule.targetPackage.split(",").any { it.trim() == packageName })
         }
 
         // Tier 1: String Match

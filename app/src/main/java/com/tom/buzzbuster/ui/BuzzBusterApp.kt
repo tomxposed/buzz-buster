@@ -20,10 +20,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.tom.buzzbuster.ui.screens.*
 import com.tom.buzzbuster.ui.theme.*
 
@@ -45,6 +47,8 @@ fun BuzzBusterApp() {
     val screens = listOf(Screen.Home, Screen.Rules, Screen.History, Screen.Settings)
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+
+    var pendingNewRule by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -117,6 +121,14 @@ fun BuzzBusterApp() {
                             restoreState = true
                         }
                     },
+                    onNewRuleClicked = {
+                        pendingNewRule = true
+                        navController.navigate(Screen.Rules.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
                     onNavigateToHistory = {
                         navController.navigate(Screen.History.route) {
                             popUpTo(navController.graph.findStartDestination().id) { saveState = true }
@@ -126,7 +138,12 @@ fun BuzzBusterApp() {
                     }
                 )
             }
-            composable(Screen.Rules.route) { RulesScreen() }
+            composable(Screen.Rules.route) { 
+                RulesScreen(
+                    openNewRule = pendingNewRule,
+                    onNewRuleConsumed = { pendingNewRule = false }
+                ) 
+            }
             composable(Screen.History.route) { HistoryScreen() }
             composable(Screen.Settings.route) { SettingsScreen() }
         }

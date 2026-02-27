@@ -24,7 +24,7 @@ object GeminiApiClient {
 
     private val gson = Gson()
 
-    private const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+    private const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 
     suspend fun generateRegex(apiKey: String, userIntent: String): GeminiResult {
         return withContext(Dispatchers.IO) {

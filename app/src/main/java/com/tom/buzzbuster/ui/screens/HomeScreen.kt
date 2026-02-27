@@ -21,7 +21,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -40,6 +42,7 @@ import com.tom.buzzbuster.ui.viewmodel.HomeViewModel
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel(),
     onNavigateToRules: () -> Unit = {},
+    onNewRuleClicked: () -> Unit = {},
     onNavigateToHistory: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -156,7 +159,7 @@ fun HomeScreen(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant
                 ),
-                onClick = onNavigateToRules
+                onClick = onNewRuleClicked
             ) {
                 Row(
                     modifier = Modifier
@@ -239,6 +242,7 @@ private fun InterceptorToggle(
     checked: Boolean,
     onCheckedChange: () -> Unit
 ) {
+    val hapticFeedback = LocalHapticFeedback.current
     val thumbPosition by animateFloatAsState(
         targetValue = if (checked) 1f else 0f,
         animationSpec = tween(durationMillis = 250),
@@ -250,7 +254,6 @@ private fun InterceptorToggle(
     val trackHeight = 36.dp
     val thumbSize = 28.dp
     val thumbPadding = 4.dp
-
     Box(
         modifier = Modifier
             .width(trackWidth)
@@ -260,7 +263,10 @@ private fun InterceptorToggle(
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-                onClick = onCheckedChange
+                onClick = {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onCheckedChange()
+                }
             ),
         contentAlignment = Alignment.CenterStart
     ) {
