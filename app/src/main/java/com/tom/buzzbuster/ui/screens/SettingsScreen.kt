@@ -33,8 +33,6 @@ fun SettingsScreen(
     val context = LocalContext.current
 
     var showApiKeyDialog by remember { mutableStateOf(false) }
-    var showResetDialog by remember { mutableStateOf(false) }
-    var showNukeDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -60,7 +58,7 @@ fun SettingsScreen(
                 subtitle = when (state.themeMode) {
                     "dark" -> "Dark Mode"
                     "light" -> "Light Mode"
-                    else -> "System Default"
+                    else -> "Auto Mode"
                 },
                 iconTint = Crimson
             ) {
@@ -151,42 +149,6 @@ fun SettingsScreen(
             }
         }
 
-        // ── Danger Zone ─────────────────────────────────
-        SettingsSection(title = "Danger Zone") {
-            SettingsRow(
-                icon = Icons.Rounded.RestartAlt,
-                title = "Restore Defaults",
-                subtitle = "Reset preferences",
-                iconTint = WarningAmber,
-                onClick = { showResetDialog = true }
-            ) {
-                Icon(
-                    Icons.Rounded.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-            )
-
-            SettingsRow(
-                icon = Icons.Rounded.DeleteForever,
-                title = "Delete All Data",
-                subtitle = "Irreversible wipedown",
-                iconTint = ErrorRed,
-                onClick = { showNukeDialog = true }
-            ) {
-                Icon(
-                    Icons.Rounded.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
         // ── Footer ──────────────────────────────────────
         Spacer(modifier = Modifier.height(24.dp))
         Text(
@@ -252,30 +214,6 @@ fun SettingsScreen(
             },
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
             shape = RoundedCornerShape(20.dp)
-        )
-    }
-
-    // ── Reset Dialog ────────────────────────────────────
-    if (showResetDialog) {
-        ConfirmDialog(
-            title = "Restore Defaults",
-            message = "This will reset all settings to their default values. Your rules and history will be preserved.",
-            confirmLabel = "Reset",
-            isDestructive = true,
-            onConfirm = { viewModel.resetDefaults() },
-            onDismiss = { showResetDialog = false }
-        )
-    }
-
-    // ── Nuke Dialog ─────────────────────────────────────
-    if (showNukeDialog) {
-        ConfirmDialog(
-            title = "Delete All Data",
-            message = "⚠️ This will permanently delete ALL blocked notification history and reset all settings. This action CANNOT be undone.",
-            confirmLabel = "Delete Everything",
-            isDestructive = true,
-            onConfirm = { viewModel.nukeAllData() },
-            onDismiss = { showNukeDialog = false }
         )
     }
 }

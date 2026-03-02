@@ -1,5 +1,6 @@
 package com.tom.buzzbuster.ui.screens
 
+import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -32,8 +34,10 @@ fun HistoryScreen(
     viewModel: HistoryViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     var selectedNotification by remember { mutableStateOf<BlockedNotification?>(null) }
     var showDeleteAllDialog by remember { mutableStateOf(false) }
+    var pendingDeleteNotification by remember { mutableStateOf<BlockedNotification?>(null) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // ── Header ──────────────────────────────────────
@@ -151,7 +155,7 @@ fun HistoryScreen(
                             notification = notification,
                             onClick = { selectedNotification = notification },
                             onRestore = { viewModel.restoreNotification(notification) },
-                            onDelete = { viewModel.deleteNotification(notification) }
+                            onDelete = { pendingDeleteNotification = notification }
                         )
                     }
                 }
@@ -170,9 +174,25 @@ fun HistoryScreen(
                 selectedNotification = null
             },
             onDelete = {
+                pendingDeleteNotification = notification
+            }
+        )
+    }
+
+    // ── Delete Notification Dialog ──────────────────────
+    pendingDeleteNotification?.let { notification ->
+        ConfirmDialog(
+            title = "Delete Notification",
+            message = "Are you sure you want to delete this notification?",
+            confirmLabel = "Delete",
+            isDestructive = true,
+            onConfirm = {
                 viewModel.deleteNotification(notification)
                 selectedNotification = null
-            }
+                pendingDeleteNotification = null
+                Toast.makeText(context, "Notification deleted", Toast.LENGTH_SHORT).show()
+            },
+            onDismiss = { pendingDeleteNotification = null }
         )
     }
 
@@ -287,33 +307,10 @@ private fun BlockedNotificationCard(
             }
             if (notification.matchedRuleName != null) {
                 Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Icon(
-                        Icons.Rounded.Rule,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "Matched: ${notification.matchedRuleName}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    notification.matchType?.let {
-                        StatusBadge(
-                            label = it.replace("_", " "),
-                            color = when (it) {
-                                "STRING_MATCH" -> InfoBlue
-                                "REGEX" -> WarningAmber
-                                "AI_GENERATED" -> Crimson
-                                else -> MaterialTheme.colorScheme.onSurfaceVariant
-                            }
-                        )
-                    }
-                }
+                StatusBadge(
+                    label = notification.matchedRuleName,
+                    color = Crimson
+                )
             }
         }
     }
@@ -327,8 +324,10 @@ private fun NotificationDetailSheet(
     onRestore: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
@@ -346,13 +345,10 @@ private fun NotificationDetailSheet(
             )
 
             DetailRow("App", notification.appName)
-            DetailRow("Package", notification.packageName)
             DetailRow("Title", notification.title)
             DetailRow("Content", notification.content)
             DetailRow("Blocked At", formatDateTime(notification.blockedAt))
             notification.matchedRuleName?.let { DetailRow("Matched Rule", it) }
-            notification.matchType?.let { DetailRow("Match Type", it.replace("_", " ")) }
-            DetailRow("Status", if (notification.isRestored) "Restored" else "Blocked")
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -363,7 +359,9 @@ private fun NotificationDetailSheet(
                 ) {
                     OutlinedButton(
                         onClick = onDelete,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = ErrorRed)
                     ) {

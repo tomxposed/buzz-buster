@@ -73,7 +73,7 @@ fun RuleEditorSheet(
     val selectedAppsLabel = remember(selectedPackages.toList(), installedApps) {
         when {
             selectedPackages.isEmpty() -> null
-            selectedPackages.size == 1 -> installedApps.find { it.packageName == selectedPackages[0] }?.name ?: selectedPackages[0]
+            selectedPackages.size == 1 -> installedApps.find { it.packageName == selectedPackages[0] }?.name
             else -> "${selectedPackages.size} apps selected"
         }
     }
@@ -338,7 +338,8 @@ fun RuleEditorSheet(
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         selectedPackages.toList().forEach { pkg ->
-                            val appName = installedApps.find { it.packageName == pkg }?.name ?: pkg
+                            val appName = installedApps.find { it.packageName == pkg }?.name
+                            if (appName != null) {
                             InputChip(
                                 selected = true,
                                 onClick = { selectedPackages.remove(pkg) },
@@ -369,6 +370,7 @@ fun RuleEditorSheet(
                                     selectedBorderColor = Crimson.copy(alpha = 0.3f)
                                 )
                             )
+                            }
                         }
                     }
                 }
