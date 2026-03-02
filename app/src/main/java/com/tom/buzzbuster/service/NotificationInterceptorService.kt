@@ -3,6 +3,7 @@ package com.tom.buzzbuster.service
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import android.os.Build
 import android.service.notification.NotificationListenerService
@@ -111,6 +112,17 @@ class NotificationInterceptorService : NotificationListenerService() {
                 notificationManager.createNotificationChannel(channel)
             }
 
+            // Build a launch intent for the original app
+            val launchIntent = context.packageManager.getLaunchIntentForPackage(blocked.packageName)
+            val contentIntent = if (launchIntent != null) {
+                PendingIntent.getActivity(
+                    context,
+                    blocked.id.toInt(),
+                    launchIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+            } else null
+
             val notification = NotificationCompat.Builder(context, RESTORE_CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentTitle(blocked.title)
@@ -118,6 +130,7 @@ class NotificationInterceptorService : NotificationListenerService() {
                 .setSubText("Restored from ${blocked.appName}")
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .apply { if (contentIntent != null) setContentIntent(contentIntent) }
                 .build()
 
             notificationManager.notify(blocked.id.toInt(), notification)

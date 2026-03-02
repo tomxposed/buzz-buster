@@ -260,18 +260,9 @@ private fun RuleCard(
                     text = rule.pattern,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (rule.targetPackage != null) {
-                    Text(
-                        text = rule.targetPackage,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Crimson.copy(alpha = 0.7f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
             }
 
             Switch(
