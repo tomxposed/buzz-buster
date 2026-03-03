@@ -12,9 +12,12 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.*
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import com.tom.buzzbuster.data.PreferencesManager
+import com.tom.buzzbuster.data.RuleSeeder
 import com.tom.buzzbuster.ui.BuzzBusterApp
 import com.tom.buzzbuster.ui.theme.BuzzBusterTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -38,6 +41,11 @@ class MainActivity : ComponentActivity() {
             ) {
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
+        }
+
+        // Seed preloaded rules on first launch (only for installed apps)
+        lifecycleScope.launch {
+            RuleSeeder.seedIfNeeded(applicationContext)
         }
 
         setContent {
