@@ -252,6 +252,7 @@ private fun RuleCard(
                 Text(
                     text = rule.name,
                     style = MaterialTheme.typography.titleSmall,
+                    color = androidx.compose.ui.graphics.Color.White,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

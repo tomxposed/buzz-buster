@@ -147,7 +147,7 @@ fun RuleEditorSheet(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 FilterTypeChip(
-                    label = "String",
+                    label = "Phrases",
                     selected = filterType == FilterType.STRING_MATCH,
                     onClick = { filterType = FilterType.STRING_MATCH }
                 )
@@ -236,7 +236,7 @@ fun RuleEditorSheet(
                 label = {
                     Text(
                         when (filterType) {
-                            FilterType.STRING_MATCH -> "Match String"
+                            FilterType.STRING_MATCH -> "Words or Phrases"
                             FilterType.REGEX -> "Regex Pattern"
                             FilterType.AI_GENERATED -> "Generated Regex"
                         }

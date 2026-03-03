@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "buzzbuster_prefs")
@@ -19,6 +20,7 @@ class PreferencesManager(context: Context) {
         val IS_INTERCEPTOR_ENABLED = booleanPreferencesKey("interceptor_enabled")
         val GEMINI_API_KEY = stringPreferencesKey("gemini_api_key")
         val AUTO_WIPE_ENABLED = booleanPreferencesKey("auto_wipe_enabled")
+        val RULES_SEEDED = booleanPreferencesKey("rules_seeded")
 
         const val DEFAULT_HISTORY_LIMIT = 500
         const val DEFAULT_THEME = "dark"
@@ -62,6 +64,14 @@ class PreferencesManager(context: Context) {
 
     suspend fun setAutoWipeEnabled(enabled: Boolean) {
         dataStore.edit { it[AUTO_WIPE_ENABLED] = enabled }
+    }
+
+    suspend fun isRulesSeeded(): Boolean {
+        return dataStore.data.first()[RULES_SEEDED] ?: false
+    }
+
+    suspend fun setRulesSeeded(seeded: Boolean) {
+        dataStore.edit { it[RULES_SEEDED] = seeded }
     }
 
     suspend fun resetAll() {
