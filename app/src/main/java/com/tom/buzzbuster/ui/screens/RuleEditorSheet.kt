@@ -1,6 +1,7 @@
 package com.tom.buzzbuster.ui.screens
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -43,6 +44,7 @@ fun RuleEditorSheet(
     var targetPackage by remember { mutableStateOf(rule?.targetPackage ?: "") }
     var aiPrompt by remember { mutableStateOf(rule?.originalPrompt ?: "") }
     var showAppPicker by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     val selectedPackages = remember {
         mutableStateListOf<String>().apply {
@@ -246,7 +248,7 @@ fun RuleEditorSheet(
                     Text(
                         when (filterType) {
                             FilterType.STRING_MATCH -> "e.g., limited offer, flash sale, act now"
-                            FilterType.REGEX -> "e.g., (?:sale|offer|discount).*\\d+%"
+                            FilterType.REGEX -> "e.g., (?:sale|offer|discount).*\\\\d+%"
                             FilterType.AI_GENERATED -> "AI-generated pattern will appear here"
                         }
                     )
@@ -376,21 +378,55 @@ fun RuleEditorSheet(
                 }
             }
 
-            // ── Save Button ─────────────────────────────
-            AccentButton(
-                text = if (isEditing) "Update Rule" else "Create Rule",
-                onClick = {
-                    if (isEditing && rule != null) {
-                        viewModel.updateRule(
-                            rule.copy(
-                                name = name,
-                                filterType = filterType,
-                                pattern = pattern,
-                                targetPackage = targetPackage.takeIf { it.isNotBlank() },
-                                originalPrompt = if (filterType == FilterType.AI_GENERATED) aiPrompt else null
-                            )
+            // ── Action Buttons ─────────────────────────────
+            if (isEditing && rule != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { showDeleteConfirm = true },
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = ErrorRed
+                        ),
+                        border = BorderStroke(1.dp, ErrorRed.copy(alpha = 0.5f))
+                    ) {
+                        Icon(
+                            Icons.Rounded.Delete,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
                         )
-                    } else {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Delete",
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    AccentButton(
+                        text = "Update",
+                        onClick = {
+                            viewModel.updateRule(
+                                rule.copy(
+                                    name = name,
+                                    filterType = filterType,
+                                    pattern = pattern,
+                                    targetPackage = targetPackage.takeIf { it.isNotBlank() },
+                                    originalPrompt = if (filterType == FilterType.AI_GENERATED) aiPrompt else null
+                                )
+                            )
+                            onDismiss()
+                        },
+                        enabled = name.isNotBlank() && pattern.isNotBlank(),
+                        icon = Icons.Rounded.Save,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            } else {
+                AccentButton(
+                    text = "Create Rule",
+                    onClick = {
                         viewModel.addRule(
                             name = name,
                             filterType = filterType,
@@ -398,14 +434,29 @@ fun RuleEditorSheet(
                             targetPackage = targetPackage.takeIf { it.isNotBlank() },
                             originalPrompt = if (filterType == FilterType.AI_GENERATED) aiPrompt else null
                         )
-                    }
-                    onDismiss()
-                },
-                enabled = name.isNotBlank() && pattern.isNotBlank(),
-                icon = if (isEditing) Icons.Rounded.Save else Icons.Rounded.Add,
-                modifier = Modifier.fillMaxWidth()
-            )
+                        onDismiss()
+                    },
+                    enabled = name.isNotBlank() && pattern.isNotBlank(),
+                    icon = Icons.Rounded.Add,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
+    }
+
+    // ── Delete Confirmation Dialog ──────────────────────
+    if (showDeleteConfirm && rule != null) {
+        ConfirmDialog(
+            title = "Delete Rule",
+            message = "Are you sure you want to delete \"${rule.name}\"? This action cannot be undone.",
+            confirmLabel = "Delete",
+            isDestructive = true,
+            onConfirm = {
+                viewModel.deleteRule(rule)
+                onDismiss()
+            },
+            onDismiss = { showDeleteConfirm = false }
+        )
     }
 
     // ── App Picker Dialog ───────────────────────────────
